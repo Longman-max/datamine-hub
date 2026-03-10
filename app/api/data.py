@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi.responses import FileResponse
 import hashlib
 import json
 import os
@@ -11,6 +12,20 @@ from app.core.config import STORAGE_DIR
 from app.models.schemas import DataNodeResponse, LineageResponse
 
 router = APIRouter(prefix="/api/data", tags=["data"])
+
+@router.get("/fetch/{hash}")
+async def fetch_data(hash: str, db: aiosqlite.Connection = Depends(get_db)):
+    async with db.execute("SELECT storage_path FROM data_nodes WHERE hash = ?", (hash,)) as cursor:
+        row = await cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Data node not found")
+        
+        storage_path = row["storage_path"]
+        if not os.path.exists(storage_path):
+            raise HTTPException(status_code=404, detail="File not found on disk")
+        
+        # We assume they are CSV for this flow
+        return FileResponse(storage_path, filename=f"{hash}.csv")
 
 @router.post("/push", response_model=DataNodeResponse)
 async def push_data(

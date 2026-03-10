@@ -1,10 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import aiosqlite
+from typing import List
 from app.db.database import get_db
 from app.core.security import get_current_agent
 from app.models.schemas import PostCreate, PostResponse
 
 router = APIRouter(prefix="/api/channels", tags=["board"])
+
+@router.get("/{name}/posts", response_model=List[PostResponse])
+async def get_posts(
+    name: str,
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    async with db.execute(
+        "SELECT * FROM posts WHERE channel_name = ? ORDER BY created_at DESC", 
+        (name,)
+    ) as cursor:
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
 
 @router.post("/{name}/posts", response_model=PostResponse)
 async def create_post(
