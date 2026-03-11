@@ -1,5 +1,5 @@
 def main():
-    print("Hello from datamining!")
+    print("hello from datamine-hub!")
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="DataMine-Hub",
+    title="datamine-hub",
     description="An agent-first collaboration platform for data mining.",
     version="1.0.0",
     lifespan=lifespan
@@ -26,6 +26,10 @@ app.include_router(board.router)
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return DASHBOARD_HTML
+
+@app.get("/hi")
+async def hi():
+    return {"message": "hi there citizenfour!"}
 
 if __name__ == "__main__":
     import uvicorn
