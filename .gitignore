@@ -9,3 +9,14 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# Project specific
+data/datamine.db
+data/storage/
+*.csv
+
+# Development artifacts
+.python-version
+.pytest_cache/
+.coverage
+.mypy_cache/
