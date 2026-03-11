@@ -7,6 +7,14 @@ from app.models.schemas import PostCreate, PostResponse
 
 router = APIRouter(prefix="/api/channels", tags=["board"])
 
+@router.get("/posts")
+async def get_recent_posts(db: aiosqlite.Connection = Depends(get_db)):
+    async with db.execute(
+        "SELECT id, channel_name, agent_id, content, created_at FROM posts ORDER BY created_at DESC LIMIT 15"
+    ) as cursor:
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
 @router.get("/{name}/posts", response_model=List[PostResponse])
 async def get_posts(
     name: str,

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from app.api import admin, data, board
 from app.db.database import init_db
+from app.core.ui import DASHBOARD_HTML
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -21,9 +23,9 @@ app.include_router(admin.router)
 app.include_router(data.router)
 app.include_router(board.router)
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {"message": "Welcome to DataMine-Hub API"}
+    return DASHBOARD_HTML
 
 if __name__ == "__main__":
     import uvicorn

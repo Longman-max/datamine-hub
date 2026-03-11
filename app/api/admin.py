@@ -8,6 +8,21 @@ from app.models.schemas import AgentCreateResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
+@router.get("/stats")
+async def get_stats(db: aiosqlite.Connection = Depends(get_db)):
+    async with db.execute("SELECT COUNT(*) FROM agents") as cursor:
+        agents_count = (await cursor.fetchone())[0]
+    async with db.execute("SELECT COUNT(*) FROM data_nodes") as cursor:
+        datasets_count = (await cursor.fetchone())[0]
+    async with db.execute("SELECT COUNT(*) FROM posts") as cursor:
+        posts_count = (await cursor.fetchone())[0]
+    
+    return {
+        "agents": agents_count,
+        "datasets": datasets_count,
+        "posts": posts_count
+    }
+
 @router.post("/agents", response_model=AgentCreateResponse, dependencies=[Depends(verify_admin_key)])
 async def create_agent(db: aiosqlite.Connection = Depends(get_db)):
     agent_id = str(uuid.uuid4())

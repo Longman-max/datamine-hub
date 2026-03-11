@@ -24,7 +24,6 @@ async def fetch_data(hash: str, db: aiosqlite.Connection = Depends(get_db)):
         if not os.path.exists(storage_path):
             raise HTTPException(status_code=404, detail="File not found on disk")
         
-        # We assume they are CSV for this flow
         return FileResponse(storage_path, filename=f"{hash}.csv")
 
 @router.post("/push", response_model=DataNodeResponse)
@@ -35,7 +34,6 @@ async def push_data(
     agent_id: str = Depends(get_current_agent),
     db: aiosqlite.Connection = Depends(get_db)
 ):
-    # Parse parent_hashes from JSON string
     try:
         parents = json.loads(parent_hashes)
         if not isinstance(parents, list):
@@ -43,27 +41,17 @@ async def push_data(
     except:
         parents = []
 
-    # Read file and calculate SHA-256
     content = await file.read()
     file_hash = hashlib.sha256(content).hexdigest()
     
-    # Check if already exists
     async with db.execute("SELECT hash FROM data_nodes WHERE hash = ?", (file_hash,)) as cursor:
-        if await cursor.fetchone():
-            # If exists, we still return it but don't re-save.
-            # However, instructions say "Insert into data_nodes"
-            # In a real app we might update metrics or just return 409/200.
-            # I'll just skip saving and return existing to be idempotent-ish.
-            pass
-        else:
-            # Save file
+        if not await cursor.fetchone():
             ext = Path(file.filename).suffix
             storage_path = str(STORAGE_DIR / f"{file_hash}{ext}")
             
             with open(storage_path, "wb") as f:
                 f.write(content)
             
-            # Verify parents exist
             for parent in parents:
                 async with db.execute("SELECT hash FROM data_nodes WHERE hash = ?", (parent,)) as cursor:
                     if not await cursor.fetchone():
@@ -73,19 +61,15 @@ async def push_data(
                         )
             
             try:
-                # Insert data_node
                 await db.execute(
                     "INSERT INTO data_nodes (hash, agent_id, storage_path, metrics) VALUES (?, ?, ?, ?)",
                     (file_hash, agent_id, storage_path, metrics)
                 )
-                
-                # Insert edges
                 for parent in parents:
                     await db.execute(
                         "INSERT OR IGNORE INTO node_edges (parent_hash, child_hash) VALUES (?, ?)",
                         (parent, file_hash)
                     )
-                
                 await db.commit()
             except Exception as e:
                 await db.rollback()
@@ -95,17 +79,18 @@ async def push_data(
         row = await cursor.fetchone()
         data = dict(row)
         if data["metrics"]:
-            data["metrics"] = json.loads(data["metrics"])
+            try:
+                data["metrics"] = json.loads(data["metrics"])
+            except:
+                pass
         return data
 
 @router.get("/lineage/{hash}", response_model=LineageResponse)
 async def get_lineage(hash: str, db: aiosqlite.Connection = Depends(get_db)):
-    # Check if node exists
     async with db.execute("SELECT hash FROM data_nodes WHERE hash = ?", (hash,)) as cursor:
         if not await cursor.fetchone():
             raise HTTPException(status_code=404, detail="Data node not found")
 
-    # Recursive CTE for ancestry
     query = """
     WITH RECURSIVE ancestry(parent, child) AS (
         SELECT parent_hash, child_hash FROM node_edges WHERE child_hash = ?
@@ -123,7 +108,6 @@ async def get_lineage(hash: str, db: aiosqlite.Connection = Depends(get_db)):
             edges.append({"parent": row["parent"], "child": row["child"]})
             ancestor_hashes.add(row["parent"])
     
-    # Fetch all nodes in the ancestry
     nodes = []
     placeholders = ",".join(["?"] * len(ancestor_hashes))
     async with db.execute(f"SELECT * FROM data_nodes WHERE hash IN ({placeholders})", list(ancestor_hashes)) as cursor:
@@ -137,3 +121,20 @@ async def get_lineage(hash: str, db: aiosqlite.Connection = Depends(get_db)):
             nodes.append(data)
             
     return {"nodes": nodes, "edges": edges}
+
+@router.get("/recent")
+async def get_recent_data(db: aiosqlite.Connection = Depends(get_db)):
+    async with db.execute(
+        "SELECT hash, agent_id, metrics, created_at FROM data_nodes ORDER BY created_at DESC LIMIT 10"
+    ) as cursor:
+        rows = await cursor.fetchall()
+        result = []
+        for row in rows:
+            data = dict(row)
+            if data["metrics"]:
+                try:
+                    data["metrics"] = json.loads(data["metrics"])
+                except:
+                    pass
+            result.append(data)
+        return result
