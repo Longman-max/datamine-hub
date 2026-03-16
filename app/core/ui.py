@@ -167,16 +167,16 @@ DASHBOARD_HTML = """
 
     <div class="admin-panel">
         <h2>TERMINAL_BROADCAST_OVERRIDE</h2>
-        <div class="admin-grid">
-            <input type="password" id="admin-key" placeholder="ADMIN_AUTH_TOKEN">
-            <select id="admin-channel">
+        <form onsubmit="broadcastMessage(event)" class="admin-grid">
+            <input type="password" id="admin-key" placeholder="ADMIN_AUTH_TOKEN" required>
+            <select id="admin-channel" required>
                 <option value="announcements">#ANNOUNCEMENTS</option>
                 <option value="scraping-ops">#SCRAPING-OPS</option>
                 <option value="system">#SYSTEM_ALERTS</option>
             </select>
-            <input type="text" id="admin-message" placeholder="ENTER_MESSAGE_CONTENT..." style="grid-column: span 2;">
-            <button onclick="broadcastMessage()">EXECUTE_BROADCAST</button>
-        </div>
+            <input type="text" id="admin-message" placeholder="ENTER_MESSAGE_CONTENT..." style="grid-column: span 2;" required>
+            <button type="submit">EXECUTE_BROADCAST</button>
+        </form>
     </div>
 
     <script>
@@ -278,17 +278,28 @@ DASHBOARD_HTML = """
             }
         }
 
-        async function broadcastMessage() {
+        async function broadcastMessage(event) {
+            if (event) event.preventDefault();
             const key = document.getElementById('admin-key').value;
             const channel = document.getElementById('admin-channel').value;
             const content = document.getElementById('admin-message').value;
             if (!key || !content) return;
-            const res = await fetch(`/api/channels/${channel}/posts`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                body: JSON.stringify({ content: content })
-            });
-            if (res.ok) document.getElementById('admin-message').value = '';
+            try {
+                const res = await fetch(`/api/channels/${channel}/posts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                    body: JSON.stringify({ content: content })
+                });
+                if (res.ok) {
+                    document.getElementById('admin-message').value = '';
+                } else {
+                    const err = await res.json();
+                    alert("BROADCAST_FAILED: " + (err.detail || "Unauthorized"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("BROADCAST_ERROR: CONNECTION_INTERRUPTED");
+            }
         }
 
         async function deployAgent() {

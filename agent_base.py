@@ -6,6 +6,7 @@ import requests
 import csv
 from datetime import datetime
 from typing import Dict, Any, Optional
+from bs4 import BeautifulSoup
 
 class AutonomousAgent(abc.ABC):
     """
@@ -99,6 +100,7 @@ class AutonomousAgent(abc.ABC):
 class LatticeScraperAgent(AutonomousAgent):
     """
     Concrete implementation: Scrapes dummy admission data and pushes to hub.
+    Now upgraded to use BeautifulSoup for real-world harvests.
     """
 
     def __init__(self, target_url: str = None, **kwargs):
@@ -115,34 +117,48 @@ class LatticeScraperAgent(AutonomousAgent):
             print(f"[LATTICE-AGENT] Waiting... (Last run: {int(now - last_run)}s ago)")
             return
 
-        print(f"[LATTICE-AGENT] Action: Starting scrape cycle for {self.target_url or 'default'}")
+        if not self.target_url:
+            print("[LATTICE-AGENT] Warning: No target_url provided. Skipping cycle.")
+            return
 
-        # 2. Simulate Scrape: Generate CSV
-        filename = f"scraped_{int(now)}.csv"
-        fieldnames = ["student_id", "name", "department", "score", "source_url"]
-        dummy_data = [
-            {
-                "student_id": f"ID-{100+i}", 
-                "name": f"Student {i}", 
-                "department": "Lattice-F", 
-                "score": 80+i,
-                "source_url": self.target_url
-            }
-            for i in range(1, 6)
-        ]
+        print(f"[LATTICE-AGENT] Action: Initiating harvest from {self.target_url}")
 
         try:
-            with open(filename, "w", newline="") as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(dummy_data)
-            print(f"[LATTICE-AGENT] Action: Generated {filename}")
+            # 2. Perform real scraping
+            response = requests.get(self.target_url, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            title = soup.title.string if soup.title else "No Title"
+            paragraphs = [p.get_text().strip() for p in soup.find_all('p') if p.get_text().strip()]
+            links = [{"text": a.get_text().strip(), "href": a.get('href')} for a in soup.find_all('a', href=True)]
+            
+            harvest_data = {
+                "source": self.target_url,
+                "timestamp": datetime.now().isoformat(),
+                "title": title,
+                "content_summary": paragraphs[:5], # First 5 paragraphs
+                "paragraphs_count": len(paragraphs),
+                "links_count": len(links),
+                "links": links[:20] # Top 20 links
+            }
+
+            filename = f"harvest_{int(now)}.json"
+            with open(filename, "w", encoding="utf-8") as f:
+                json.dump(harvest_data, f, indent=4)
+            
+            print(f"[LATTICE-AGENT] Action: Data harvested. Found {len(paragraphs)} paragraphs and {len(links)} links.")
 
             # 3. Push Data
-            print("[LATTICE-AGENT] Action: Pushing data to hub...")
+            print("[LATTICE-AGENT] Action: Pushing harvest to hub...")
             payload = {
                 "parent_hashes": json.dumps([]),
-                "metrics": json.dumps({"source": "Lattice-F"})
+                "metrics": json.dumps({
+                    "source": "Lattice-F/BS4", 
+                    "paragraphs_harvested": len(paragraphs),
+                    "title": title[:50]
+                })
             }
             
             result = self.api_post_file("/api/data/push", filename, data=payload)
@@ -152,7 +168,7 @@ class LatticeScraperAgent(AutonomousAgent):
                 print(f"[LATTICE-AGENT] Success: Data pushed. Hash: {data_hash}")
 
                 # 4. Broadcast
-                broadcast_content = f"Lattice-F harvest complete. Root hash: {data_hash}"
+                broadcast_content = f"Lattice-F harvest complete: {title[:30]}... Root hash: {data_hash}"
                 print(f"[LATTICE-AGENT] Action: Broadcasting to #{self.channel_name}")
                 self.api_post_json(f"/api/channels/{self.channel_name}/posts", {"content": broadcast_content})
 
@@ -161,11 +177,13 @@ class LatticeScraperAgent(AutonomousAgent):
                 self.save_state()
                 print("[LATTICE-AGENT] Action: State saved.")
             else:
-                print("[LATTICE-AGENT] Error: Data push failed or returned no hash.")
+                print("[LATTICE-AGENT] Error: Data push failed.")
 
+        except Exception as e:
+            print(f"[LATTICE-AGENT] Fatal error during scraping: {e}")
         finally:
             # Cleanup
-            if os.path.exists(filename):
+            if 'filename' in locals() and os.path.exists(filename):
                 os.remove(filename)
 
 if __name__ == "__main__":
