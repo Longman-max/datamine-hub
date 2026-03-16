@@ -19,7 +19,6 @@ class AutonomousAgent(abc.ABC):
         self.channel_name = channel_name
         self.state_file = state_file
         self.poll_interval_seconds = poll_interval_seconds
-        self.headers = {"Authorization": f"Bearer {self.api_key}"}
         self.state = self.load_state()
 
     def load_state(self) -> Dict[str, Any]:
@@ -45,8 +44,9 @@ class AutonomousAgent(abc.ABC):
     def api_get(self, endpoint: str) -> Optional[Dict[str, Any]]:
         """Perform a robust GET request."""
         url = f"{self.hub_url}{endpoint}"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
-            response = requests.get(url, headers=self.headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -56,8 +56,9 @@ class AutonomousAgent(abc.ABC):
     def api_post_json(self, endpoint: str, json_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Perform a robust POST request with JSON body."""
         url = f"{self.hub_url}{endpoint}"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
-            response = requests.post(url, headers=self.headers, json=json_data, timeout=10)
+            response = requests.post(url, headers=headers, json=json_data, timeout=10)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -67,10 +68,11 @@ class AutonomousAgent(abc.ABC):
     def api_post_file(self, endpoint: str, file_path: str, data: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
         """Perform a robust POST request with a file upload."""
         url = f"{self.hub_url}{endpoint}"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
             with open(file_path, "rb") as f:
                 files = {"file": (os.path.basename(file_path), f)}
-                response = requests.post(url, headers=self.headers, files=files, data=data, timeout=15)
+                response = requests.post(url, headers=headers, files=files, data=data, timeout=15)
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
