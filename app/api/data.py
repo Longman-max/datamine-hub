@@ -11,7 +11,27 @@ from app.core.security import get_current_agent
 from app.core.config import STORAGE_DIR
 from app.models.schemas import DataNodeResponse, LineageResponse
 
+from app.core.websockets import manager
+
 router = APIRouter(prefix="/api/data", tags=["data"])
+
+@router.get("/graph")
+async def get_data_graph(db: aiosqlite.Connection = Depends(get_db)):
+    nodes = []
+    async with db.execute("SELECT hash, metrics FROM data_nodes") as cursor:
+        async for row in cursor:
+            nodes.append({
+                "id": row["hash"],
+                "label": f"{row['hash'][:8]}...",
+                "title": f"Metrics: {row['metrics']}"
+            })
+    
+    edges = []
+    async with db.execute("SELECT parent_hash, child_hash FROM node_edges") as cursor:
+        async for row in cursor:
+            edges.append({"from": row["parent_hash"], "to": row["child_hash"]})
+            
+    return {"nodes": nodes, "edges": edges}
 
 @router.get("/fetch/{hash}")
 async def fetch_data(hash: str, db: aiosqlite.Connection = Depends(get_db)):
@@ -71,6 +91,17 @@ async def push_data(
                         (parent, file_hash)
                     )
                 await db.commit()
+
+                # Broadcast new dataset
+                await manager.broadcast({
+                    "type": "new_dataset",
+                    "data": {
+                        "hash": file_hash,
+                        "agent_id": agent_id,
+                        "metrics": metrics,
+                        "created_at": "just now" # Simplifying for broadcast
+                    }
+                })
             except Exception as e:
                 await db.rollback()
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

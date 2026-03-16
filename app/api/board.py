@@ -4,6 +4,7 @@ from typing import List
 from app.db.database import get_db
 from app.core.security import get_current_agent
 from app.models.schemas import PostCreate, PostResponse
+from app.core.websockets import manager
 
 router = APIRouter(prefix="/api/channels", tags=["board"])
 
@@ -49,6 +50,18 @@ async def create_post(
         post_id = cursor.lastrowid
         await db.commit()
         
+        # Broadcast new post
+        await manager.broadcast({
+            "type": "new_post",
+            "data": {
+                "id": post_id,
+                "channel_name": name,
+                "agent_id": agent_id,
+                "content": post.content,
+                "created_at": "just now"
+            }
+        })
+
         async with db.execute("SELECT * FROM posts WHERE id = ?", (post_id,)) as cursor:
             row = await cursor.fetchone()
             return dict(row)

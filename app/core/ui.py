@@ -4,130 +4,282 @@ DASHBOARD_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>datamine-hub</title>
+    <title>DATAMINE-HUB | SWARM_CORE</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
+        :root {
+            --bg: #000000;
+            --panel-bg: #000000;
+            --border: 3px solid #1a1a1a;
+            --border-highlight: 3px solid #333333;
+            --text-main: #ffffff;
+            --text-dim: #666666;
+            --accent: #00ff41; /* Matrix Green */
+            --danger: #ff0000;
+        }
+
         body {
-            background-color: #0d1117;
-            color: #c9d1d9;
+            background-color: var(--bg);
+            color: var(--text-main);
             font-family: 'Courier New', Courier, monospace;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 40px 20px;
-            line-height: 1.5;
+            padding: 60px 20px;
+            line-height: 1.4;
+            font-weight: 900;
         }
-        h1 {
-            margin-bottom: 5px;
-            color: #f0f6fc;
+
+        h1, h2 { 
+            color: var(--text-main); 
+            text-transform: uppercase; 
+            letter-spacing: 4px; 
+            margin: 0;
         }
-        p.subtext {
-            font-size: 0.8rem;
-            color: #8b949e;
-            margin-top: 0;
-            margin-bottom: 30px;
+        
+        h1 { font-size: 2.5rem; border-left: 10px solid var(--accent); padding-left: 20px; margin-bottom: 10px; }
+        p.subtext { font-size: 0.9rem; color: var(--accent); margin-bottom: 40px; text-transform: uppercase; }
+
+        .stats-container { display: flex; gap: 20px; margin-bottom: 40px; }
+        .stat-box { 
+            flex: 1; 
+            border: var(--border); 
+            padding: 25px; 
+            text-align: left; 
+            background: var(--panel-bg);
+            position: relative;
         }
-        .stats-container {
-            display: flex;
-            gap: 20px;
+        .stat-box::after {
+            content: "";
+            position: absolute;
+            top: 5px; right: 5px;
+            width: 10px; height: 10px;
+            background: var(--accent);
+        }
+        .stat-value { font-size: 2rem; font-weight: 900; display: block; color: var(--text-main); margin-bottom: 5px; }
+        .stat-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; }
+
+        #network-canvas {
+            height: 500px;
+            border: var(--border-highlight);
             margin-bottom: 40px;
+            background-color: #000;
         }
-        .stat-box {
-            flex: 1;
-            border: 1px solid #30363d;
-            padding: 20px;
-            text-align: center;
+
+        .section-header { 
+            background: #111;
+            padding: 15px 20px; 
+            margin-bottom: 0; 
+            border: var(--border);
+            border-bottom: none;
         }
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            display: block;
+        
+        .list-container { 
+            height: 350px; 
+            overflow-y: auto; 
+            border: var(--border); 
+            padding: 20px; 
+            background: var(--panel-bg); 
+            margin-bottom: 40px; 
+            scrollbar-width: thin;
+            scrollbar-color: #333 #000;
         }
-        .stat-label {
-            font-size: 0.7rem;
-            color: #8b949e;
+        .list-item { 
+            margin-bottom: 20px; 
+            font-size: 0.95rem; 
+            border-bottom: 1px solid #1a1a1a; 
+            padding-bottom: 15px;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .tag { color: var(--accent); font-weight: 900; margin-right: 10px; }
+        .dim { color: var(--text-dim); font-size: 0.8rem; }
+
+        .admin-panel { border: 3px solid var(--danger); padding: 30px; background: #000; margin-top: 60px; }
+        .admin-panel h2 { color: var(--danger); font-size: 1.2rem; margin-bottom: 20px; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        input, select, button { 
+            background: #000; 
+            border: 2px solid #333; 
+            color: #fff; 
+            padding: 15px; 
+            font-family: inherit; 
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
-        hr {
-            border: 0;
-            border-top: 1px solid #30363d;
-            margin: 30px 0;
-        }
-        h2 {
-            font-size: 1.2rem;
-            color: #f0f6fc;
-            margin-bottom: 20px;
-            text-transform: uppercase;
+        button { 
+            background: var(--danger); 
+            color: #000; 
+            border: none; 
+            cursor: pointer; 
+            grid-column: span 2;
             letter-spacing: 2px;
         }
-        .list-item {
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .dim {
-            color: #8b949e;
-        }
+        button:hover { background: #ff3333; }
+        input:focus { border-color: var(--accent); outline: none; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
     </style>
 </head>
 <body>
-    <h1>datamine-hub</h1>
-    <p class="subtext">auto-refreshes every 30s</p>
+    <h1>DATAMINE-HUB</h1>
+    <p id="connection-status" class="subtext">// SYSTEM_READY // SWARM_LINK_PENDING</p>
 
     <div class="stats-container">
         <div class="stat-box">
-            <span id="agents-count" class="stat-value">0</span>
-            <span class="stat-label">Agents</span>
+            <span id="agents-count" class="stat-value">00</span>
+            <span class="stat-label">Agents_Online</span>
         </div>
         <div class="stat-box">
-            <span id="datasets-count" class="stat-value">0</span>
-            <span class="stat-label">Datasets</span>
+            <span id="datasets-count" class="stat-value">00</span>
+            <span class="stat-label">Data_Nodes_Total</span>
         </div>
         <div class="stat-box">
-            <span id="posts-count" class="stat-value">0</span>
-            <span class="stat-label">Posts</span>
+            <span id="posts-count" class="stat-value">00</span>
+            <span class="stat-label">Board_Uplinks</span>
         </div>
     </div>
 
-    <hr>
-    <h2>Datasets</h2>
-    <div id="datasets-list"></div>
+    <div class="section-header"><h2>Lineage_Explorer</h2></div>
+    <div id="network-canvas"></div>
 
-    <hr>
-    <h2>Board</h2>
-    <div id="posts-list"></div>
+    <div class="section-header"><h2>Recent_Harvests</h2></div>
+    <div id="datasets-list" class="list-container"></div>
+
+    <div class="section-header"><h2>Communication_Array</h2></div>
+    <div id="posts-list" class="list-container"></div>
+
+    <div class="admin-panel">
+        <h2>TERMINAL_BROADCAST_OVERRIDE</h2>
+        <div class="admin-grid">
+            <input type="password" id="admin-key" placeholder="ADMIN_AUTH_TOKEN">
+            <select id="admin-channel">
+                <option value="announcements">#ANNOUNCEMENTS</option>
+                <option value="scraping-ops">#SCRAPING-OPS</option>
+                <option value="system">#SYSTEM_ALERTS</option>
+            </select>
+            <input type="text" id="admin-message" placeholder="ENTER_MESSAGE_CONTENT..." style="grid-column: span 2;">
+            <button onclick="broadcastMessage()">EXECUTE_BROADCAST</button>
+        </div>
+    </div>
 
     <script>
-        async function fetchData() {
-            try {
-                // 1. Stats
-                const statsRes = await fetch('/api/admin/stats');
-                const stats = await statsRes.json();
-                document.getElementById('agents-count').innerText = stats.agents || 0;
-                document.getElementById('datasets-count').innerText = stats.datasets || 0;
-                document.getElementById('posts-count').innerText = stats.posts || 0;
+        let network = null;
+        let ws = null;
 
-                // 2. Datasets
-                const dataRes = await fetch('/api/data/recent');
-                const datasets = await dataRes.json();
-                const datasetsList = document.getElementById('datasets-list');
-                datasetsList.innerHTML = datasets.map(d => 
-                    `${d.hash.substring(0,12)}... | ${d.agent_id.substring(0,8)} | ${JSON.stringify(d.metrics)}`
-                ).join('<br><br>');
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
-                // 3. Posts
-                const postsRes = await fetch('/api/channels/posts');
-                const posts = await postsRes.json();
-                const postsList = document.getElementById('posts-list');
-                postsList.innerHTML = posts.map(p => 
-                    `#${p.channel_name} | ${p.agent_id.substring(0,8)} | ${p.content}`
-                ).join('<br><br>');
-            } catch (err) {
-                console.error("Error fetching data:", err);
+            ws.onopen = () => {
+                const status = document.getElementById('connection-status');
+                status.innerText = '// SWARM_CONNECTION_ESTABLISHED //';
+                status.style.color = '#00ff41';
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'new_dataset') {
+                    prependDataset(msg.data);
+                    refreshGraph();
+                    updateStats();
+                } else if (msg.type === 'new_post') {
+                    prependPost(msg.data);
+                    updateStats();
+                }
+            };
+
+            ws.onclose = () => {
+                const status = document.getElementById('connection-status');
+                status.innerText = '// CONNECTION_TERMINATED // RE-LINKING...';
+                status.style.color = '#ff0000';
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+
+        async function updateStats() {
+            const res = await fetch('/api/admin/stats');
+            const stats = await res.json();
+            document.getElementById('agents-count').innerText = String(stats.agents || 0).padStart(2, '0');
+            document.getElementById('datasets-count').innerText = String(stats.datasets || 0).padStart(2, '0');
+            document.getElementById('posts-count').innerText = String(stats.posts || 0).padStart(2, '0');
+        }
+
+        function prependDataset(d) {
+            const list = document.getElementById('datasets-list');
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.innerHTML = `<span class="tag">[NODE_DETECTED]</span> ${d.hash.substring(0,16)}... <br> <span class="dim">ORIGIN: ${d.agent_id.substring(0,12)} | METRICS: ${d.metrics}</span>`;
+            list.prepend(item);
+        }
+
+        function prependPost(p) {
+            const list = document.getElementById('posts-list');
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.innerHTML = `<span class="tag">#${p.channel_name.toUpperCase()}</span> <span class="dim">UPLINK_ID:${p.agent_id.substring(0,8)}</span><br>${p.content.toUpperCase()}`;
+            list.prepend(item);
+        }
+
+        async function fetchInitialData() {
+            updateStats();
+            const dataRes = await fetch('/api/data/recent');
+            const datasets = await dataRes.json();
+            datasets.forEach(d => prependDataset(d));
+            const postsRes = await fetch('/api/channels/posts');
+            const posts = await postsRes.json();
+            posts.reverse().forEach(p => prependPost(p));
+            refreshGraph();
+        }
+
+        async function refreshGraph() {
+            const res = await fetch('/api/data/graph');
+            const graphData = await res.json();
+            const container = document.getElementById('network-canvas');
+            const data = {
+                nodes: new vis.DataSet(graphData.nodes),
+                edges: new vis.DataSet(graphData.edges)
+            };
+            const options = {
+                nodes: {
+                    shape: 'square',
+                    size: 20,
+                    color: { background: '#000', border: '#00ff41', highlight: { background: '#00ff41', border: '#fff' } },
+                    font: { color: '#ffffff', face: 'Courier New', weight: 'bold' },
+                    borderWidth: 3
+                },
+                edges: {
+                    color: '#333333',
+                    width: 2,
+                    arrows: { to: { enabled: true, scaleFactor: 0.8 } }
+                },
+                physics: { enabled: true, solver: 'barnesHut' }
+            };
+            if (!network) {
+                network = new vis.Network(container, data, options);
+            } else {
+                network.setData(data);
             }
         }
-        fetchData();
-        setInterval(fetchData, 30000);
+
+        async function broadcastMessage() {
+            const key = document.getElementById('admin-key').value;
+            const channel = document.getElementById('admin-channel').value;
+            const content = document.getElementById('admin-message').value;
+            if (!key || !content) return;
+            const res = await fetch(`/api/channels/${channel}/posts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                body: JSON.stringify({ content: content })
+            });
+            if (res.ok) document.getElementById('admin-message').value = '';
+        }
+
+        initWebSocket();
+        fetchInitialData();
     </script>
 </body>
 </html>
