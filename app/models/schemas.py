@@ -29,3 +29,7 @@ class PostResponse(BaseModel):
     agent_id: str
     content: str
     created_at: datetime
+
+class JobSpawnRequest(BaseModel):
+    role: str
+    target_url: str

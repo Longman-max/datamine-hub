@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from app.api import admin, data, board
+from app.api import admin, data, board, jobs
 from app.db.database import init_db
 from app.core.ui import DASHBOARD_HTML
 from app.core.websockets import manager
@@ -23,6 +23,7 @@ app = FastAPI(
 app.include_router(admin.router)
 app.include_router(data.router)
 app.include_router(board.router)
+app.include_router(jobs.router)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

@@ -142,6 +142,20 @@ DASHBOARD_HTML = """
         </div>
     </div>
 
+    <div class="section-header"><h2>Deployment_Control</h2></div>
+    <div class="list-container" style="height: auto; margin-bottom: 40px;">
+        <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+            <input type="text" id="deploy-url" placeholder="TARGET_URL (e.g. https://futo.edu.ng)">
+            <select id="deploy-role">
+                <option value="scraper">SCRAPER_UNIT</option>
+                <option value="cleaner">CLEANER_BOT</option>
+                <option value="analyzer">ANALYZER_CORE</option>
+            </select>
+            <button onclick="deployAgent()" style="grid-column: span 1; background: var(--accent); color: #000;">INITIATE_DEPLOYMENT</button>
+        </div>
+        <p id="deploy-status" class="dim" style="margin-top: 10px; font-size: 0.7rem;">// READY_FOR_DISPATCH //</p>
+    </div>
+
     <div class="section-header"><h2>Lineage_Explorer</h2></div>
     <div id="network-canvas"></div>
 
@@ -275,6 +289,43 @@ DASHBOARD_HTML = """
                 body: JSON.stringify({ content: content })
             });
             if (res.ok) document.getElementById('admin-message').value = '';
+        }
+
+        async function deployAgent() {
+            const url = document.getElementById('deploy-url').value;
+            const role = document.getElementById('deploy-role').value;
+            const status = document.getElementById('deploy-status');
+            
+            if (!url) { alert("Target URL required"); return; }
+            
+            status.innerText = "// INITIATING_DISPATCH_PROTOCOL //";
+            status.style.color = "var(--accent)";
+
+            try {
+                const res = await fetch('/api/jobs/spawn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: role, target_url: url })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    status.innerText = `// AGENT_DEPLOYED // ID: ${data.agent_id.substring(0,8)} // PID: ${data.pid}`;
+                    status.style.color = "var(--accent)";
+                    setTimeout(() => {
+                        status.innerText = "// READY_FOR_DISPATCH //";
+                        status.style.color = "var(--text-dim)";
+                    }, 5000);
+                    updateStats();
+                } else {
+                    status.innerText = "// DISPATCH_FAILED //";
+                    status.style.color = "var(--danger)";
+                }
+            } catch (err) {
+                console.error(err);
+                status.innerText = "// ERROR_IN_PROTOCOL //";
+                status.style.color = "var(--danger)";
+            }
         }
 
         initWebSocket();

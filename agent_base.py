@@ -101,6 +101,10 @@ class LatticeScraperAgent(AutonomousAgent):
     Concrete implementation: Scrapes dummy admission data and pushes to hub.
     """
 
+    def __init__(self, target_url: str = None, **kwargs):
+        super().__init__(**kwargs)
+        self.target_url = target_url
+
     def execute_task(self):
         # 1. Load state and check throttle
         self.state = self.load_state()
@@ -111,13 +115,19 @@ class LatticeScraperAgent(AutonomousAgent):
             print(f"[LATTICE-AGENT] Waiting... (Last run: {int(now - last_run)}s ago)")
             return
 
-        print(f"[LATTICE-AGENT] Action: Starting scrape cycle at {datetime.now().isoformat()}")
+        print(f"[LATTICE-AGENT] Action: Starting scrape cycle for {self.target_url or 'default'}")
 
         # 2. Simulate Scrape: Generate CSV
-        filename = "student_admissions.csv"
-        fieldnames = ["student_id", "name", "department", "score"]
+        filename = f"scraped_{int(now)}.csv"
+        fieldnames = ["student_id", "name", "department", "score", "source_url"]
         dummy_data = [
-            {"student_id": f"ID-{100+i}", "name": f"Student {i}", "department": "Lattice-F", "score": 80+i}
+            {
+                "student_id": f"ID-{100+i}", 
+                "name": f"Student {i}", 
+                "department": "Lattice-F", 
+                "score": 80+i,
+                "source_url": self.target_url
+            }
             for i in range(1, 6)
         ]
 
