@@ -14,7 +14,7 @@ DASHBOARD_HTML = """
             --border-highlight: 3px solid #333333;
             --text-main: #ffffff;
             --text-dim: #666666;
-            --accent: #00ff41; /* Matrix Green */
+            --accent: #00ff41; 
             --danger: #ff0000;
         }
 
@@ -22,28 +22,28 @@ DASHBOARD_HTML = """
             background-color: var(--bg);
             color: var(--text-main);
             font-family: 'Courier New', Courier, monospace;
-            max-width: 1000px;
+            max-width: 800px; /* Reduced from 1000px */
             margin: 0 auto;
-            padding: 60px 20px;
-            line-height: 1.4;
+            padding: 48px 16px; /* Reduced from 60px 20px */
+            line-height: 1.3;
             font-weight: 900;
         }
 
         h1, h2 { 
             color: var(--text-main); 
             text-transform: uppercase; 
-            letter-spacing: 4px; 
+            letter-spacing: 3px; 
             margin: 0;
         }
         
-        h1 { font-size: 2.5rem; border-left: 10px solid var(--accent); padding-left: 20px; margin-bottom: 10px; }
-        p.subtext { font-size: 0.9rem; color: var(--accent); margin-bottom: 40px; text-transform: uppercase; }
+        h1 { font-size: 2rem; border-left: 8px solid var(--accent); padding-left: 16px; margin-bottom: 8px; }
+        p.subtext { font-size: 0.75rem; color: var(--accent); margin-bottom: 32px; text-transform: uppercase; }
 
-        .stats-container { display: flex; gap: 20px; margin-bottom: 40px; }
+        .stats-container { display: flex; gap: 16px; margin-bottom: 32px; }
         .stat-box { 
             flex: 1; 
             border: var(--border); 
-            padding: 25px; 
+            padding: 20px; /* Reduced from 25px */
             text-align: left; 
             background: var(--panel-bg);
             position: relative;
@@ -51,60 +51,61 @@ DASHBOARD_HTML = """
         .stat-box::after {
             content: "";
             position: absolute;
-            top: 5px; right: 5px;
-            width: 10px; height: 10px;
+            top: 4px; right: 4px;
+            width: 8px; height: 8px;
             background: var(--accent);
         }
-        .stat-value { font-size: 2rem; font-weight: 900; display: block; color: var(--text-main); margin-bottom: 5px; }
-        .stat-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; }
+        .stat-value { font-size: 1.6rem; font-weight: 900; display: block; color: var(--text-main); margin-bottom: 4px; }
+        .stat-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; }
 
         #network-canvas {
-            height: 500px;
+            height: 400px; /* Reduced from 500px */
             border: var(--border-highlight);
-            margin-bottom: 40px;
+            margin-bottom: 32px;
             background-color: #000;
         }
 
         .section-header { 
             background: #111;
-            padding: 15px 20px; 
+            padding: 12px 16px; 
             margin-bottom: 0; 
             border: var(--border);
             border-bottom: none;
         }
         
         .list-container { 
-            height: 350px; 
+            height: 280px; /* Reduced from 350px */
             overflow-y: auto; 
             border: var(--border); 
-            padding: 20px; 
+            padding: 16px; 
             background: var(--panel-bg); 
-            margin-bottom: 40px; 
+            margin-bottom: 32px; 
             scrollbar-width: thin;
             scrollbar-color: #333 #000;
         }
         .list-item { 
-            margin-bottom: 20px; 
-            font-size: 0.95rem; 
+            margin-bottom: 16px; 
+            font-size: 0.8rem; /* Scaled down */
             border-bottom: 1px solid #1a1a1a; 
-            padding-bottom: 15px;
+            padding-bottom: 12px;
         }
         .list-item:last-child { border-bottom: none; }
-        .tag { color: var(--accent); font-weight: 900; margin-right: 10px; }
-        .dim { color: var(--text-dim); font-size: 0.8rem; }
+        .tag { color: var(--accent); font-weight: 900; margin-right: 8px; }
+        .dim { color: var(--text-dim); font-size: 0.7rem; }
 
-        .admin-panel { border: 3px solid var(--danger); padding: 30px; background: #000; margin-top: 60px; }
-        .admin-panel h2 { color: var(--danger); font-size: 1.2rem; margin-bottom: 20px; }
-        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .admin-panel { border: 3px solid var(--danger); padding: 24px; background: #000; margin-top: 48px; }
+        .admin-panel h2 { font-size: 1rem; margin-bottom: 16px; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         
         input, select, button { 
             background: #000; 
             border: 2px solid #333; 
             color: #fff; 
-            padding: 15px; 
+            padding: 12px; 
             font-family: inherit; 
             font-weight: 900;
             text-transform: uppercase;
+            font-size: 0.75rem;
         }
         button { 
             background: var(--danger); 
@@ -117,11 +118,9 @@ DASHBOARD_HTML = """
         button:hover { background: #ff3333; }
         input:focus { border-color: var(--accent); outline: none; }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
-        ::-webkit-scrollbar-thumb:hover { background: #444; }
     </style>
 </head>
 <body>
@@ -246,15 +245,15 @@ DASHBOARD_HTML = """
             const options = {
                 nodes: {
                     shape: 'square',
-                    size: 20,
+                    size: 16,
                     color: { background: '#000', border: '#00ff41', highlight: { background: '#00ff41', border: '#fff' } },
-                    font: { color: '#ffffff', face: 'Courier New', weight: 'bold' },
-                    borderWidth: 3
+                    font: { color: '#ffffff', face: 'Courier New', size: 10, weight: 'bold' },
+                    borderWidth: 2
                 },
                 edges: {
                     color: '#333333',
-                    width: 2,
-                    arrows: { to: { enabled: true, scaleFactor: 0.8 } }
+                    width: 1.5,
+                    arrows: { to: { enabled: true, scaleFactor: 0.6 } }
                 },
                 physics: { enabled: true, solver: 'barnesHut' }
             };
