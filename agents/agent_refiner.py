@@ -48,6 +48,10 @@ def agent_refiner():
         original_hash = match.group(1)
         print(f"Extracted original hash: {original_hash}")
 
+        # Ensure tmp directory exists
+        tmp_dir = os.path.join("data", "tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+
         # 3. Downloading the Data
         print(f"Downloading dataset {original_hash}...")
         fetch_url = f"{HUB_URL}/api/data/fetch/{original_hash}"
@@ -55,7 +59,7 @@ def agent_refiner():
         data_response.raise_for_status()
 
         # Save temporarily to load into pandas
-        temp_file = "temp_raw_data.csv"
+        temp_file = os.path.join(tmp_dir, "temp_raw_data.csv")
         with open(temp_file, "wb") as f:
             f.write(data_response.content)
 
@@ -72,7 +76,7 @@ def agent_refiner():
         final_rows = len(df)
         rows_removed = initial_rows - final_rows
         
-        cleaned_file = "cleaned_dataset.csv"
+        cleaned_file = os.path.join(tmp_dir, "cleaned_dataset.csv")
         df.to_csv(cleaned_file, index=False)
         print(f"Cleaned data saved. Removed {rows_removed} rows.")
 

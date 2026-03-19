@@ -35,7 +35,12 @@ def run_lattice_scraper():
     ]
     
     df = pd.DataFrame(data)
-    filename = "student_admissions.csv"
+    
+    # Ensure tmp directory exists
+    tmp_dir = os.path.join("data", "tmp")
+    os.makedirs(tmp_dir, exist_ok=True)
+    filename = os.path.join(tmp_dir, "student_admissions.csv")
+    
     df.to_csv(filename, index=False)
     
     print(f"Scrape complete. Generated {filename} with {len(df)} records.")

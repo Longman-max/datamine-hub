@@ -13,6 +13,11 @@ wheels/
 # Project specific
 data/datamine.db
 data/storage/
+data/state/*.json
+data/tmp/*.csv
+data/tmp/*.json
+test*.csv
+state_*.json
 *.csv
 
 # Development artifacts
@@ -20,3 +25,4 @@ data/storage/
 .pytest_cache/
 .coverage
 .mypy_cache/
+summary.txt

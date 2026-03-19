@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 import time
-from agent_base import LatticeScraperAgent, AutonomousAgent
+from agents.agent_base import LatticeScraperAgent, AutonomousAgent
 
 class CleanerAgent(AutonomousAgent):
     """Stub for a data cleaning agent."""

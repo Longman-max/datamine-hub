@@ -18,7 +18,15 @@ class AutonomousAgent(abc.ABC):
         self.hub_url = hub_url.rstrip("/")
         self.api_key = api_key
         self.channel_name = channel_name
-        self.state_file = state_file
+        
+        # Ensure state directory exists and path is correct
+        state_dir = os.path.join("data", "state")
+        os.makedirs(state_dir, exist_ok=True)
+        if not os.path.dirname(state_file):
+            self.state_file = os.path.join(state_dir, state_file)
+        else:
+            self.state_file = state_file
+
         self.poll_interval_seconds = poll_interval_seconds
         self.state = self.load_state()
 
@@ -144,7 +152,11 @@ class LatticeScraperAgent(AutonomousAgent):
                 "links": links[:20] # Top 20 links
             }
 
-            filename = f"harvest_{int(now)}.json"
+            # Ensure tmp directory exists
+            tmp_dir = os.path.join("data", "tmp")
+            os.makedirs(tmp_dir, exist_ok=True)
+            filename = os.path.join(tmp_dir, f"harvest_{int(now)}.json")
+            
             with open(filename, "w", encoding="utf-8") as f:
                 json.dump(harvest_data, f, indent=4)
             
