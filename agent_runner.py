@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from agents.agent_base import LatticeScraperAgent, AutonomousAgent
+from agents.agent_miner import ExtractionMinerAgent
 
 class CleanerAgent(AutonomousAgent):
     """Stub for a data cleaning agent."""
@@ -22,7 +23,7 @@ class AnalyzerAgent(AutonomousAgent):
 
 def main():
     parser = argparse.ArgumentParser(description="DataMine Swarm Agent Runner")
-    parser.add_argument("--role", type=str, required=True, choices=["scraper", "cleaner", "analyzer"], help="Agent role")
+    parser.add_argument("--role", type=str, required=True, choices=["scraper", "cleaner", "analyzer", "miner"], help="Agent role")
     parser.add_argument("--url", type=str, default="http://localhost:8000", help="Target URL or Hub URL")
     
     args = parser.parse_args()
@@ -51,6 +52,8 @@ def main():
         agent = CleanerAgent(**agent_params)
     elif args.role == "analyzer":
         agent = AnalyzerAgent(**agent_params)
+    elif args.role == "miner":
+        agent = ExtractionMinerAgent(**agent_params)
     else:
         print(f"[FATAL] Unknown role: {args.role}")
         sys.exit(1)
