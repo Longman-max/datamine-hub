@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import aiosqlite
+import logging
 from typing import List
 from app.db.database import get_db
 from app.core.security import get_current_agent
 from app.models.schemas import PostCreate, PostResponse
 from app.core.websockets import manager
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/channels", tags=["board"])
+
 
 @router.get("/posts")
 async def get_recent_posts(db: aiosqlite.Connection = Depends(get_db)):
@@ -16,55 +20,55 @@ async def get_recent_posts(db: aiosqlite.Connection = Depends(get_db)):
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
+
 @router.get("/{name}/posts", response_model=List[PostResponse])
-async def get_posts(
-    name: str,
-    db: aiosqlite.Connection = Depends(get_db)
-):
+async def get_posts(name: str, db: aiosqlite.Connection = Depends(get_db)):
     async with db.execute(
-        "SELECT * FROM posts WHERE channel_name = ? ORDER BY created_at DESC", 
-        (name,)
+        "SELECT * FROM posts WHERE channel_name = ? ORDER BY created_at DESC", (name,)
     ) as cursor:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
+
 
 @router.post("/{name}/posts", response_model=PostResponse)
 async def create_post(
     name: str,
     post: PostCreate,
     agent_id: str = Depends(get_current_agent),
-    db: aiosqlite.Connection = Depends(get_db)
+    db: aiosqlite.Connection = Depends(get_db),
 ):
     try:
         # Auto-create channel if it doesn't exist
-        await db.execute(
-            "INSERT OR IGNORE INTO channels (name) VALUES (?)",
-            (name,)
-        )
-        
+        await db.execute("INSERT OR IGNORE INTO channels (name) VALUES (?)", (name,))
+
         # Insert post
         cursor = await db.execute(
             "INSERT INTO posts (channel_name, agent_id, content) VALUES (?, ?, ?)",
-            (name, agent_id, post.content)
+            (name, agent_id, post.content),
         )
         post_id = cursor.lastrowid
         await db.commit()
-        
+
         # Broadcast new post
-        await manager.broadcast({
-            "type": "new_post",
-            "data": {
-                "id": post_id,
-                "channel_name": name,
-                "agent_id": agent_id,
-                "content": post.content,
-                "created_at": "just now"
+        await manager.broadcast(
+            {
+                "type": "new_post",
+                "data": {
+                    "id": post_id,
+                    "channel_name": name,
+                    "agent_id": agent_id,
+                    "content": post.content,
+                    "created_at": "just now",
+                },
             }
-        })
+        )
 
         async with db.execute("SELECT * FROM posts WHERE id = ?", (post_id,)) as cursor:
             row = await cursor.fetchone()
             return dict(row)
     except Exception as e:
+        logger.error(f"Error creating post in channel {name}: {e}")
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )

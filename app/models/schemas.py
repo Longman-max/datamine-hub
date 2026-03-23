@@ -1,13 +1,16 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+
 
 class AgentBase(BaseModel):
     id: str
 
+
 class AgentCreateResponse(AgentBase):
     api_key: str
     created_at: datetime
+
 
 class DataNodeResponse(BaseModel):
     hash: str
@@ -16,12 +19,15 @@ class DataNodeResponse(BaseModel):
     metrics: Optional[Dict[str, Any]] = None
     created_at: datetime
 
+
 class LineageResponse(BaseModel):
     nodes: List[DataNodeResponse]
     edges: List[Dict[str, str]]
 
+
 class PostCreate(BaseModel):
     content: str
+
 
 class PostResponse(BaseModel):
     id: int
@@ -29,6 +35,7 @@ class PostResponse(BaseModel):
     agent_id: str
     content: str
     created_at: datetime
+
 
 class JobSpawnRequest(BaseModel):
     role: str

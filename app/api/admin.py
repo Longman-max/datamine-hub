@@ -2,11 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 import uuid
 import secrets
 import aiosqlite
+import logging
 from app.db.database import get_db
 from app.core.security import verify_admin_key
 from app.models.schemas import AgentCreateResponse
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
 
 @router.get("/stats")
 async def get_stats(db: aiosqlite.Connection = Depends(get_db)):
@@ -16,28 +20,37 @@ async def get_stats(db: aiosqlite.Connection = Depends(get_db)):
         datasets_count = (await cursor.fetchone())[0]
     async with db.execute("SELECT COUNT(*) FROM posts") as cursor:
         posts_count = (await cursor.fetchone())[0]
-    
+
     return {
         "agents": agents_count,
         "datasets": datasets_count,
-        "posts": posts_count
+        "posts": posts_count,
     }
 
-@router.post("/agents", response_model=AgentCreateResponse, dependencies=[Depends(verify_admin_key)])
+
+@router.post(
+    "/agents",
+    response_model=AgentCreateResponse,
+    dependencies=[Depends(verify_admin_key)],
+)
 async def create_agent(db: aiosqlite.Connection = Depends(get_db)):
     agent_id = str(uuid.uuid4())
     api_key = secrets.token_urlsafe(32)
-    
+
     try:
         await db.execute(
-            "INSERT INTO agents (id, api_key) VALUES (?, ?)",
-            (agent_id, api_key)
+            "INSERT INTO agents (id, api_key) VALUES (?, ?)", (agent_id, api_key)
         )
         await db.commit()
-        
-        async with db.execute("SELECT id, api_key, created_at FROM agents WHERE id = ?", (agent_id,)) as cursor:
+
+        async with db.execute(
+            "SELECT id, api_key, created_at FROM agents WHERE id = ?", (agent_id,)
+        ) as cursor:
             row = await cursor.fetchone()
             return dict(row)
     except Exception as e:
+        logger.error(f"Error creating agent: {e}")
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )

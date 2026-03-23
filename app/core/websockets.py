@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import WebSocket
 
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -16,8 +17,9 @@ class ConnectionManager:
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except:
+            except Exception as e:
                 # Handle broken connections silently or log
-                pass
+                print(f"WebSocket send error: {e}")
+
 
 manager = ConnectionManager()
